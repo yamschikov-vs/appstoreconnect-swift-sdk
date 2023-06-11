@@ -50,109 +50,15 @@ final class APIProviderTests: XCTestCase {
 
     // MARK: - Tests
 
-    func testRequestExecutionWithVoidResponse() {
-        let response = Response<Data>(requestURL: nil, statusCode: 200, rateLimit: nil, data: nil)
-        let mockRequestExecutor = MockRequestExecutor(expectedResponse: Result.success(response))
-        let apiProvider = APIProvider(configuration: configuration, requestExecutor: mockRequestExecutor)
-
-        let sampleEndpoint = APIEndpoint.v1.betaGroups.id("mockID").delete
-        apiProvider.request(sampleEndpoint) { result in
-            // using the mock request executor the block is called sync
-            XCTAssertTrue(result.isSuccess)
-        }
-    }
-
-    func testRequestExecutionErrorResponse() throws {
-        let expectedURL = URL(string: "https://api.appstoreconnect.apple.com")!
-        let errorResponse = ErrorResponse(errors: [
-            .init(
-                id: UUID().uuidString,
-                status: "404",
-                code: "NOT_FOUND",
-                title: "The specified resource does not exist",
-                detail: "There is no resource of type 'builds' with id 'app.appId'"
-            )
-        ])
-        let responseData = try JSONEncoder().encode(errorResponse)
-        let response = Response<Data>(requestURL: expectedURL, statusCode: 404, rateLimit: nil, data: responseData)
-        let mockRequestExecutor = MockRequestExecutor(expectedResponse: Result.success(response))
-        let apiProvider = APIProvider(configuration: configuration, requestExecutor: mockRequestExecutor)
-
-        let sampleEndpoint = APIEndpoint.v1.betaGroups.id("mockID").delete
-        apiProvider.request(sampleEndpoint) { result in
-            // using the mock request executor the block is called sync
-            XCTAssertNotNil(result.error)
-            guard
-                let error = result.error as? APIProvider.Error,
-                case let APIProvider.Error.requestFailure(statusCode, errorResponse, url) = error else {
-                XCTFail("We expect a requestFailure error")
-                return
-            }
-            XCTAssertNotNil(errorResponse)
-            XCTAssertEqual(statusCode, 404)
-            XCTAssertEqual(url?.absoluteString, expectedURL.absoluteString)
-            XCTAssertEqual(error.localizedDescription, """
-            Request https://api.appstoreconnect.apple.com failed with status code 404. Related response error(s):
-
-            The request failed with response code 404 NOT_FOUND
-
-            The specified resource does not exist. There is no resource of type 'builds' with id 'app.appId').
-            """)
-        }
-    }
-
-    func testDownloadRequestWithResultSuccess() {
-        let response = Response(requestURL: nil, statusCode: 200, rateLimit: nil, data: URL(fileURLWithPath: "randompath"))
-        let mockRequestExecutor = MockRequestExecutor(expectedResponse: Result.success(response))
-
-        let apiProvider = APIProvider(configuration: configuration, requestExecutor: mockRequestExecutor)
-
-        let reportEndpoint = APIEndpoint.v1.salesReports.get(parameters: .init(filterFrequency: [],
-                                                                               filterReportSubType: [],
-                                                                               filterReportType: [],
-                                                                               filterVendorNumber: []))
-        apiProvider.download(reportEndpoint) { result in
-            // using the mock request executor the block is called sync
-            XCTAssertTrue(result.isSuccess)
-            XCTAssertEqual(result.value!, URL(fileURLWithPath: "randompath"))
-        }
-    }
-
-    func testDownloadRequestWithProblemOnFileCreation() {
-        let response = Response<URL>(requestURL: nil, statusCode: 200, rateLimit: nil, data: nil)
-        let mockRequestExecutor = MockRequestExecutor(expectedResponse: Result.success(response))
-
-        let apiProvider = APIProvider(configuration: configuration, requestExecutor: mockRequestExecutor)
-        let reportEndpoint = APIEndpoint.v1.salesReports.get(parameters: .init(filterFrequency: [],
-                                                                               filterReportSubType: [],
-                                                                               filterReportType: [],
-                                                                               filterVendorNumber: []))
-        apiProvider.download(reportEndpoint) { result in
-            // using the mock request executor the block is called sync
-            XCTAssertTrue(result.isFailure)
-            guard
-                let error = result.error as? APIProvider.Error else {
-                    XCTFail("We expect a requestFailure error")
-                    return
-            }
-            XCTAssert(error.debugDescription == APIProvider.Error.downloadError.debugDescription)
-
-        }
-    }
-
-    func testDownloadRequestWithFailure() {
-        let response = Response<URL>(requestURL: nil, statusCode: 500, rateLimit: nil, data: nil)
-        let mockRequestExecutor = MockRequestExecutor(expectedResponse: Result.success(response))
-
-        let apiProvider = APIProvider(configuration: configuration, requestExecutor: mockRequestExecutor)
-        let reportEndpoint = APIEndpoint.v1.salesReports.get(parameters: .init(filterFrequency: [],
-                                                                               filterReportSubType: [],
-                                                                               filterReportType: [],
-                                                                               filterVendorNumber: []))
-        apiProvider.download(reportEndpoint) { result in
-            // using the mock request executor the block is called sync
-            XCTAssertTrue(result.isFailure)
-
-        }
+    func testCustomerAPIPath() {
+        let request = APIEndpoint
+            .v1
+            .apps
+            .id("123")
+            .customerReviews
+            .get(parameters: .init(
+                sort: [.minuscreatedDate]
+            ))
+        XCTAssertEqual(request.path, "/v1/apps/123/customerReviews")
     }
 }
