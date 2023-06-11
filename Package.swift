@@ -21,7 +21,7 @@ let package = Package(
     platforms: [
         .iOS(.v14),
         .macOS(.v11),
-        .tvOS(.v14)
+        .tvOS(.v14),
     ],
     products: [
         .library(name: "AppStoreConnect-Swift-SDK", targets: ["AppStoreConnect-Swift-SDK"])
